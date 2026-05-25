@@ -1,5 +1,5 @@
 ---
-description: Install a personal /name shortcut so /named-agents:name can be invoked as just /name
+description: Install a personal /name shortcut so /named-memory:name can be invoked as just /name
 allowed-tools: [Bash]
 ---
 

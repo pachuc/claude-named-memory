@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copies the plugin's commands/name.md to ~/.claude/commands/name.md so the
-# user can invoke /name <profile> instead of /named-agents:name <profile>.
+# user can invoke /name <profile> instead of /named-memory:name <profile>.
 # Fully deterministic — no LLM involvement, no content drift.
 
 set -euo pipefail
@@ -20,4 +20,4 @@ mkdir -p "$DEST_DIR"
 cp "$SOURCE" "$DEST"
 
 echo "Installed: $DEST"
-echo "You can now use /name <profile> in any session (as long as the named-agents plugin is enabled)."
+echo "You can now use /name <profile> in any session (as long as the named-memory plugin is enabled)."

@@ -1,10 +1,13 @@
 #!/bin/bash
-# Deterministic profile setup: creates ~/.claude/profiles/<name>/ with memory.md
-# and settings.json, then installs a shell alias (claude-<name>) per the
-# user's profile-config.sh.
+# Deterministic profile setup: creates ~/.claude/profiles/<name>/memory.md
+# and installs a shell alias (claude-<name>) per the user's profile-config.sh.
 #
-# Idempotent: re-running on an existing profile preserves memory.md and only
-# refreshes the alias + settings.json.
+# The alias exports CLAUDE_NM_PROFILE=<name> in the env so the plugin's hook
+# scripts (registered via hooks/hooks.json) know which profile is active.
+# Vanilla `claude` sessions have no env var set; hooks fast-fail silently.
+#
+# Idempotent: re-running on an existing profile preserves memory.md and
+# refreshes the alias.
 
 set -euo pipefail
 
@@ -50,7 +53,7 @@ if [ ! -f "$CONFIG" ]; then
   case "$LOGIN_SHELL" in
     *fish*)
       cat > "$CONFIG" <<'EOF'
-# named-agents shell config. Edit to switch shells or relocate aliases.
+# named-memory shell config. Edit to switch shells or relocate aliases.
 # SHELL_TYPE: fish | bash | zsh
 SHELL_TYPE="fish"
 # fish: directory for function files. bash/zsh: file to append `alias` lines.
@@ -78,20 +81,11 @@ source "$CONFIG"
 : "${SHELL_TYPE:?SHELL_TYPE not set in $CONFIG}"
 : "${ALIAS_INSTALL_PATH:?ALIAS_INSTALL_PATH not set in $CONFIG}"
 
-# Hook scripts run under /bin/sh, which doesn't inherit Claude Code's
-# plugin PATH. Symlink the hook to a stable location and reference that
-# absolute path in settings.json so SessionEnd can actually find it.
-HOOK_SRC="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)/compact-on-exit.sh"
-HOOK_LINK_DIR="$HOME/.claude/scripts"
-HOOK_LINK="$HOOK_LINK_DIR/compact-on-exit.sh"
-mkdir -p "$HOOK_LINK_DIR"
-ln -sfn "$HOOK_SRC" "$HOOK_LINK"
-
 PROFILE_DIR="$HOME/.claude/profiles/$NAME"
 ALIAS_REFRESH_ONLY=0
 
 if [ -d "$PROFILE_DIR" ]; then
-  echo "Profile '$NAME' already exists at $PROFILE_DIR — preserving memory.md, refreshing settings.json and alias."
+  echo "Profile '$NAME' already exists at $PROFILE_DIR — preserving memory.md, refreshing alias."
   ALIAS_REFRESH_ONLY=1
 else
   mkdir -p "$PROFILE_DIR"
@@ -109,41 +103,24 @@ This file is your persistent memory across sessions.
 EOF
 fi
 
-# Always (re)write settings.json so hook command stays current
-cat > "$PROFILE_DIR/settings.json" <<EOF
-{
-  "hooks": {
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$HOOK_LINK $NAME"
-          }
-        ]
-      }
-    ]
-  }
-}
-EOF
-
-# Install/refresh shell alias
+# Install/refresh shell alias. The alias exports CLAUDE_NM_PROFILE so the
+# plugin's hook scripts know which profile is active when claude runs.
 case "$SHELL_TYPE" in
   fish)
     mkdir -p "$ALIAS_INSTALL_PATH"
     FN_FILE="$ALIAS_INSTALL_PATH/claude-$NAME.fish"
     cat > "$FN_FILE" <<EOF
 function claude-$NAME
-    claude --append-system-prompt (cat $PROFILE_DIR/memory.md | string collect) --settings $PROFILE_DIR/settings.json --add-dir $PROFILE_DIR \$argv
+    set -lx CLAUDE_NM_PROFILE $NAME
+    claude --append-system-prompt (cat $PROFILE_DIR/memory.md | string collect) --add-dir $PROFILE_DIR \$argv
 end
 EOF
     echo "Installed fish function: $FN_FILE"
     ;;
   bash|zsh)
-    ALIAS_LINE="alias claude-$NAME='claude --append-system-prompt \"\$(cat $PROFILE_DIR/memory.md)\" --settings $PROFILE_DIR/settings.json --add-dir $PROFILE_DIR'"
+    ALIAS_LINE="alias claude-$NAME='CLAUDE_NM_PROFILE=$NAME claude --append-system-prompt \"\$(cat $PROFILE_DIR/memory.md)\" --add-dir $PROFILE_DIR'"
     touch "$ALIAS_INSTALL_PATH"
     if grep -qE "^alias claude-$NAME=" "$ALIAS_INSTALL_PATH"; then
-      # Replace existing line
       tmp=$(mktemp)
       grep -vE "^alias claude-$NAME=" "$ALIAS_INSTALL_PATH" > "$tmp"
       mv "$tmp" "$ALIAS_INSTALL_PATH"

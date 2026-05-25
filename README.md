@@ -1,11 +1,11 @@
-# named-agents
+# named-memory
 
-A Claude Code plugin that adds **named agent profiles**: invoke `claude` plain for a clean slate, or `claude-<name>` for an agent that loads a persistent per-name `memory.md` at startup, updates it organically during the session, and extracts/compacts it at session end.
+A Claude Code plugin that adds **named memory profiles**: invoke `claude` plain for a clean slate, or `claude-<name>` for an agent that loads a persistent per-name `memory.md` at startup, updates it organically during the session, and extracts/compacts it at session end.
 
 ## What it does
 
-- **`/named-agents:name <profile>`** — create or update a named profile from the current session's context. Synthesizes a `memory.md` and installs a `claude-<profile>` shell alias.
-- **`/named-agents:install`** — one-time step that drops a `~/.claude/commands/name.md` shortcut so you can use `/name <profile>` instead of `/named-agents:name <profile>`.
+- **`/named-memory:name <profile>`** — create or update a named profile from the current session's context. Synthesizes a `memory.md` and installs a `claude-<profile>` shell alias.
+- **`/named-memory:install`** — one-time step that drops a `~/.claude/commands/name.md` shortcut so you can use `/name <profile>` instead of `/named-memory:name <profile>`.
 - **Memory lifecycle**:
   - At session start, the profile's `memory.md` is appended to Claude's system prompt.
   - During the session, Claude organically reads/writes `memory.md` via `Write`/`Edit`.
@@ -16,21 +16,21 @@ A Claude Code plugin that adds **named agent profiles**: invoke `claude` plain f
 ### Via marketplace (after publishing)
 
 ```
-/plugin marketplace add <github-user>/claude-named-agents
-/plugin install named-agents@claude-named-agents
-/named-agents:install
+/plugin marketplace add <github-user>/claude-named-memory
+/plugin install named-memory@pachu-plugins
+/named-memory:install
 ```
 
 ### Local development
 
 ```
-claude --plugin-dir ~/code/claude-named-agents
+claude --plugin-dir ~/code/claude-named-memory
 ```
 
 Then in that session:
 
 ```
-/named-agents:install
+/named-memory:install
 ```
 
 After install, `/name <profile>` works in any session.
@@ -57,8 +57,8 @@ The plugin ships:
 
 ```
 .claude-plugin/plugin.json     # manifest
-commands/name.md               # /named-agents:name
-commands/install.md            # /named-agents:install
+commands/name.md               # /named-memory:name
+commands/install.md            # /named-memory:install
 bin/setup-profile.sh           # creates profile dir + alias (on PATH when plugin enabled)
 bin/compact-on-exit.sh         # SessionEnd hook (on PATH when plugin enabled)
 ```
@@ -70,7 +70,7 @@ User data (created on first run, persists across plugin updates/uninstalls):
 ~/.claude/profiles/<name>/memory.md         # the persistent memory
 ~/.claude/profiles/<name>/settings.json     # registers SessionEnd hook
 ~/.claude/profiles/<name>/extract.log       # background-process output
-~/.claude/commands/name.md                  # /name shortcut (from /named-agents:install)
+~/.claude/commands/name.md                  # /name shortcut (from /named-memory:install)
 ```
 
 ## Configuration
@@ -113,8 +113,8 @@ The 20,000-character compaction threshold is in `bin/compact-on-exit.sh`. Change
 ## Troubleshooting
 
 - **`claude-<name>` not found** — open a new shell. For fish, the function is auto-loaded from `~/.config/fish/functions/`; for bash/zsh, source your rc file.
-- **SessionEnd hook didn't run** — check `~/.claude/profiles/<name>/extract.log` for errors. The hook requires `jq` and `claude` on PATH. The named-agents plugin must be enabled for `compact-on-exit.sh` to be on PATH.
-- **`/name` not working but `/named-agents:name` works** — re-run `/named-agents:install` to drop the shortcut.
+- **SessionEnd hook didn't run** — check `~/.claude/profiles/<name>/extract.log` for errors. The hook requires `jq` and `claude` on PATH. The named-memory plugin must be enabled for `compact-on-exit.sh` to be on PATH.
+- **`/name` not working but `/named-memory:name` works** — re-run `/named-memory:install` to drop the shortcut.
 
 ## License
 

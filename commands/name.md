@@ -13,4 +13,6 @@ Steps (do all of this fully automatically — no confirmation prompts):
 
 3. Reflect on this conversation and update the memory file below the `---` divider. Record any important information about the task or tasks worked on in this session: important things that were built, key insights, any overall plan or project to track, reference filepaths or documents, and notes that may be helpful for future iterations on the work. If memory already exists below the divider, append or integrate new content rather than overwriting. Keep the header (everything above and including the `---`) untouched.
 
-4. Show the user a one-line confirmation: the alias name, the profile dir, and a reminder to use `claude-$ARGUMENTS` in a new shell.
+4. Run `ack-failures.sh $ARGUMENTS` via Bash. Running `/name` is itself a fix action — by manually updating memory you've worked around any past SessionEnd hook failure, so any pending failure banner for this profile can be dismissed.
+
+5. Show the user a one-line confirmation: the alias name, the profile dir, and a reminder to use `claude-$ARGUMENTS` in a new shell.
