@@ -1,0 +1,8 @@
+{
+  "name": "named-memory",
+  "description": "Named agent profiles for Claude Code: invoke claude-<name> to load a persistent per-name memory.md that updates organically during the session and is extracted/compacted at SessionEnd.",
+  "version": "0.1.0",
+  "author": {
+    "name": "pachu"
+  }
+}

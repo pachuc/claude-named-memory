@@ -1,0 +1,14 @@
+{
+  "name": "pachu-plugins",
+  "owner": {
+    "name": "pachu"
+  },
+  "description": "Personal Claude Code plugins",
+  "plugins": [
+    {
+      "name": "named-memory",
+      "source": "./plugins/named-memory",
+      "description": "Named agent profiles with persistent per-name memory.md, organic mid-session updates, and SessionEnd extraction+compaction."
+    }
+  ]
+}
