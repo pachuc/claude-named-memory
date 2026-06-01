@@ -42,13 +42,13 @@ if [ -z "$TRANSCRIPT" ] || [ ! -f "$TRANSCRIPT" ]; then
   exit 0
 fi
 
-INITIAL_CHARS=$(wc -c < "$MEMORY_FILE")
-audit hook start "transcript=$TRANSCRIPT size=$INITIAL_CHARS"
+INITIAL_WORDS=$(wc -w < "$MEMORY_FILE")
+audit hook start "transcript=$TRANSCRIPT size=$INITIAL_WORDS"
 
 INSTR="Read the session transcript at $TRANSCRIPT (JSONL format, one message per line). The current named-memory file has been copied to a tmpfile (path provided below). Update the tmpfile in place with any important information about the task or tasks worked on in this session: important things that were built, key insights, any overall plan or project to track, reference filepaths or documents, and notes that may be helpful for future iterations on the work. Avoid duplicating content already present. Keep the existing header intact — only modify content below the '---' divider."
 
-if [ "$INITIAL_CHARS" -gt 20000 ]; then
-  INSTR="$INSTR The memory file is currently $INITIAL_CHARS characters, over the 20,000 threshold. After updating, also compact: merge duplicates, drop outdated or contradicted entries, consolidate redundancy. Aim to bring it back under 20,000 characters while keeping the important content."
+if [ "$INITIAL_WORDS" -gt 20000 ]; then
+  INSTR="$INSTR The memory file is currently $INITIAL_WORDS words, over the 20,000 threshold. After updating, also compact: merge duplicates, drop outdated or contradicted entries, consolidate redundancy. Aim to bring it back under 20,000 words while keeping the important content."
 fi
 
 # Backgrounded extractor — SessionEnd hooks can't block exit.
@@ -61,20 +61,20 @@ fi
 
   finish() {
     local rc=$?
-    local final_chars
-    final_chars=$(wc -c < "$MEMORY_FILE" 2>/dev/null || echo 0)
-    local delta=$((final_chars - INITIAL_CHARS))
+    local final_words
+    final_words=$(wc -w < "$MEMORY_FILE" 2>/dev/null || echo 0)
+    local delta=$((final_words - INITIAL_WORDS))
     if [ "$rc" -eq 0 ]; then
-      audit hook complete "exit=0 size=$final_chars delta=$delta transcript=$TRANSCRIPT"
+      audit hook complete "exit=0 size=$final_words delta=$delta transcript=$TRANSCRIPT"
     else
-      audit hook error "exit=$rc size=$final_chars delta=$delta transcript=$TRANSCRIPT reason=$RC_REASON"
+      audit hook error "exit=$rc size=$final_words delta=$delta transcript=$TRANSCRIPT reason=$RC_REASON"
     fi
     echo "$(date -Iseconds) [done exit=$rc delta=$delta]" >> "$LOG"
     rm -f "$TMP_NEW"
   }
   trap finish EXIT
 
-  echo "$(date -Iseconds) [start] memory=${INITIAL_CHARS}c tmp=$TMP_NEW transcript=$TRANSCRIPT" >> "$LOG"
+  echo "$(date -Iseconds) [start] memory=${INITIAL_WORDS}w tmp=$TMP_NEW transcript=$TRANSCRIPT" >> "$LOG"
 
   # Step 1: shell copies memory.md -> tmpfile (deterministic)
   cp "$MEMORY_FILE" "$TMP_NEW"

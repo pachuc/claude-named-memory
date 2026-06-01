@@ -95,7 +95,7 @@ else
 This file is your persistent memory across sessions.
 - Read it at session start (it's already in your system prompt).
 - Update it with Write/Edit as you learn things worth keeping.
-- A SessionEnd hook extracts anything you missed and compacts if this file exceeds 20,000 characters.
+- A SessionEnd hook extracts anything you missed and compacts if this file exceeds 20,000 words.
 - Don't worry about terseness mid-session — compaction is automatic.
 
 ---
