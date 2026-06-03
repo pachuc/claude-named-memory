@@ -141,10 +141,19 @@ The agent never reads `audit.log` directly. The shell does the parsing; the agen
 - **fish** — a function file at `~/.config/fish/functions/claude-<name>.fish` (autoloaded on demand)
 - **bash/zsh** — an `alias` line appended to the appropriate rc file
 
-The alias body is essentially:
+Both forms export `CLAUDE_NM_PROFILE=<name>` and load the profile's `memory.md` as system-prompt context, while also granting Claude access to the profile directory:
 
 ```bash
-CLAUDE_NM_PROFILE=<name> claude $argv
+# bash/zsh
+alias claude-<name>='CLAUDE_NM_PROFILE=<name> claude --append-system-prompt "$(cat ~/.claude/profiles/<name>/memory.md)" --add-dir ~/.claude/profiles/<name>'
+```
+
+```fish
+# fish
+function claude-<name>
+    set -lx CLAUDE_NM_PROFILE <name>
+    claude --append-system-prompt (cat ~/.claude/profiles/<name>/memory.md | string collect) --add-dir ~/.claude/profiles/<name> $argv
+end
 ```
 
 Shell choice and alias install path are recorded in `~/.claude/scripts/profile-config.sh` on first profile creation and reused for subsequent profiles.
