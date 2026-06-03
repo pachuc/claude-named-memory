@@ -13,7 +13,14 @@ Claude Code's existing memory hooks bind context to two natural keys: the workin
 
 Named profiles give each of these a dedicated, persistent home. `claude-linux-setup` carries the state of your machine config; `claude-feature-x` carries the in-flight design decisions for a complex feature; `claude-prod-debug` carries what you know so far about a flaky production incident. None of them clutter your project memory or user preferences. Plain `claude` stays unaffected — a clean slate when you want one.
 
-The aim is named, human-readable memory you don't have to manage. No project- or session-keyed indexing, no per-fact files, no manual compaction — one markdown file per profile, evolved across sessions.
+## Install
+
+```text
+/plugin marketplace add pachuc/claude-named-memory
+/plugin install named-memory@pachu-plugins
+# optionally add /name shortcut
+/named-memory:install
+```
 
 ## Features
 
@@ -27,17 +34,15 @@ The aim is named, human-readable memory you don't have to manage. No project- or
 
 ### Slash commands
 
-All commands are namespaced under `/named-memory:` and most also have unnamespaced aliases once you run `/named-memory:install`.
+All commands are namespaced under `/named-memory:`. `/named-memory:install` adds the `/name` command as a top level slash command.
 
-| Command | What it does |
-|---|---|
-| `/named-memory:name <profile>` (or `/name <profile>`) | Create or update a profile from the *current* session's context. Synthesizes `memory.md` and installs the `claude-<profile>` shell alias. Re-running on an existing profile updates without clobbering. |
-| `/named-memory:install` | One-time step that drops a `~/.claude/commands/name.md` shortcut so `/name` works in any session. |
-| `/named-memory:list` | Table of all profiles with size (in words), last-modified time, and a preview of the first content line. Flags profiles near the compaction limit. |
-| `/named-memory:view <name>` | Print the full `memory.md` for a profile. |
-| `/named-memory:rename <old> <new>` | Move the profile directory and swap the shell alias atomically. |
-| `/named-memory:delete <name>` | Delete a profile after a double confirmation (in-session question + script-level `--yes` enforcement). |
-| `/named-memory:ack <name>` | Dismiss the SessionStart failure banner for a profile (after you've read `extract.log` and resolved the issue, or just want to silence the warning). |
+`/named-memory:name <profile>` (or `/name <profile>`) - Create or update a profile from the *current* session's context. Synthesizes `memory.md` and installs the `claude-<profile>` shell alias. Re-running on an existing profile updates without clobbering.
+`/named-memory:install` - One-time step that drops a `~/.claude/commands/name.md` shortcut so `/name` works in any session.
+`/named-memory:list` - Table of all profiles with size (in words), last-modified time, and a preview of the first content line. Flags profiles near the compaction limit.
+`/named-memory:view <name>` - Print the full `memory.md` for a profile.
+`/named-memory:rename <old> <new>` - Move the profile directory and swap the shell alias atomically.
+`/named-memory:delete <name>` - Delete a profile after a double confirmation (in-session question + script-level `--yes` enforcement).
+`/named-memory:ack <name>` - Dismiss the SessionStart failure banner for a profile (after you've read `extract.log` and resolved the issue, or just want to silence the warning).
 
 ### Typical workflow
 
@@ -55,31 +60,6 @@ $ claude-myproject
 #    extractor against the transcript. By the time you start your
 #    next claude-myproject session, memory.md is updated and compacted.
 ```
-
-### Install
-
-Via marketplace (after publishing to GitHub):
-
-```text
-/plugin marketplace add <github-user>/claude-named-memory
-/plugin install named-memory@pachu-plugins
-/named-memory:install
-```
-
-Local development from this repo:
-
-```text
-claude --plugin-dir ~/code/claude-named-memory/plugins/named-memory
-```
-
-After editing plugin source, pick up changes with:
-
-```text
-/plugin marketplace update pachu-plugins
-/reload-plugins
-```
-
-This refreshes the cached copy under `~/.claude/plugins/cache/pachu-plugins/named-memory/`, which is what hooks actually execute from.
 
 ### Configuration
 
