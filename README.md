@@ -47,10 +47,11 @@ Disable it anytime with `/named-memory:uninstall-extra` — your `memory.md` fil
 **Extra tier (after `/install-extra`):**
 
 - **One shell alias per profile.** `claude-<name>` exports `CLAUDE_NM_PROFILE=<name>`, auto-loads `memory.md` as system-prompt context, and runs `claude`.
+- **Loads memory into system prompt.** Since the memory is loaded into the system prompt at startup, it will always survive compaction.
 - **Automatic extraction + compaction at session end.** A backgrounded headless `claude -p` reads the session transcript, captures anything the in-session model didn't already write down, and compacts the file when it crosses the word threshold. Survives the parent session's exit.
 - **Health banner only when something actually broke.** A `SessionStart` hook parses the per-profile audit log and emits a one-line prescriptive banner on real structural failures. Healthy sessions add zero context.
 - **Append-only audit log per profile** at `~/.claude/profiles/<name>/audit.log` for debugging hook execution.
-- **Reversible.** `/uninstall-extra` removes aliases, shortcuts, and re-dormants the hooks; `memory.md` files are kept.
+- **Reversible.** `/uninstall-extra` removes aliases, shortcuts, and re-dormants the hooks; `memory.md` files are kept. Caveat, you must run `/uninstall-extra` before uninstalling the plugin, otherwise it will leave the extra hooks/aliases behind.
 
 ### Slash commands
 
