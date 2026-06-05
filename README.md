@@ -41,6 +41,7 @@ Disable it anytime with `/named-memory:uninstall-extra` — your `memory.md` fil
 
 - **Per-name persistent memory.** Each profile is `~/.claude/profiles/<name>/memory.md`.
 - **Manual load/save.** `/load <name>` pulls a profile's memory into the current session's context (one profile per session). `/save` writes what you've learned this session back to the active profile.
+- **Deterministic active-profile tracking.** `/load` and `/name` record the active profile in a host-local, session-scoped marker (keyed by `$CLAUDE_CODE_SESSION_ID`), so `/save` knows where to write and "one profile per session" is enforced — without relying on the model to remember across context compaction. The marker is never synced across hosts and a fresh session starts clean. In the extra tier the `CLAUDE_NM_PROFILE` env var takes precedence over the marker (see Architecture), so behavior there is unchanged.
 - **Create from context.** `/name <name>` synthesizes a new profile from the current conversation.
 - **Zero footprint.** No shell rc edits, no active hooks. The plugin's hooks are registered but dormant — they no-op until you opt in.
 
@@ -128,6 +129,8 @@ The per-profile shell alias `claude-<name>` (installed by `/install-extra`) expo
 - plain `claude`, or any session in the minimal tier → at least one guard fails → hooks exit in microseconds → no observable behavior change
 
 This is why the minimal tier is truly zero-footprint: with no marker, the hooks short-circuit before doing anything, and nothing is ever written to your shell rc.
+
+**Resolving the active profile (`session-marker.sh`).** `/load`, `/name`, and `/save` need to agree on which profile is "active" this session. `session-marker.sh get` resolves it with a strict precedence: if `CLAUDE_NM_PROFILE` is set (extra tier — the `claude-<name>` alias exported it), that wins; otherwise it reads a session-scoped marker file at `${CLAUDE_CODE_TMPDIR:-$TMPDIR}/named-memory/active-$CLAUDE_CODE_SESSION_ID` written by `/load` and `/name` (minimal tier). Keying on the session id means the marker survives context compaction (the id is fixed for the session's lifetime), is host-local (never synced by DotSync2 or similar), and resets cleanly on a new or resumed session. The effect: in the minimal tier the active profile is tracked deterministically instead of relying on the model's memory, and in the extra tier the env var remains authoritative so nothing changes — `/save` simply gains a reliable way to find its target.
 
 ### Memory lifecycle
 
@@ -238,6 +241,8 @@ claude-named-memory/
 │           │                                Claude sessions, but referenced from hooks.json via
 │           │                                ${CLAUDE_PLUGIN_ROOT}, NOT via PATH
 │           ├── setup-profile.sh           ← creates profile dir + memory.md header (no alias)
+│           ├── session-marker.sh          ← session-scoped active-profile marker (get/set/clear;
+│           │                                CLAUDE_NM_PROFILE wins in the extra tier)
 │           ├── install-alias.sh           ← installs claude-<name> alias (extra tier only)
 │           ├── install-extra.sh           ← /install-extra: marker + aliases + shortcuts
 │           ├── uninstall-extra.sh         ← /uninstall-extra: removes marker/aliases/shortcuts

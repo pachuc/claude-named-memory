@@ -18,6 +18,6 @@ Steps (do all of this fully automatically — no confirmation prompts):
 
 5. Run `ack-failures.sh $ARGUMENTS` via Bash. Manually updating memory is itself a fix action, so any pending SessionEnd-failure banner for this profile can be dismissed.
 
-6. Remember, for the rest of this session, that the active named memory is "$ARGUMENTS" — a later `/save` will write back to it.
+6. Run `session-marker.sh set $ARGUMENTS` via Bash to record "$ARGUMENTS" as the active profile for this session. A later `/save` (no argument) reads this marker to know where to write. (In the extra tier the `CLAUDE_NM_PROFILE` env var already pins the active profile and takes precedence, so this is a harmless no-op there.)
 
 7. Show the user a one-line confirmation: the profile dir, and — if an alias was installed — a reminder to use `claude-$ARGUMENTS` in a new shell. If in minimal mode, remind them they can update this memory later with `/save`, or run `/install-extra` for the automatic experience.

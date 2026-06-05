@@ -5,7 +5,9 @@ allowed-tools: [Bash, Read, Edit, Write]
 
 Persist the active named memory for this session back to its `memory.md`.
 
-1. **Determine the target.** The target is the named memory you loaded via `/load` or created via `/name` earlier in THIS session. This command takes no argument. If you have NOT loaded or created a named memory this session, do not guess — tell the user to run `/load <name>` (to update an existing memory) or `/name <name>` (to create one) first, then stop.
+1. **Determine the target.** Run `session-marker.sh get` via Bash. This prints the active profile for this session — the `claude-<name>` profile in the extra tier (from `CLAUDE_NM_PROFILE`), or the one loaded via `/load` / created via `/name` in the minimal tier. This command takes no argument.
+   - If it prints nothing, do not guess — tell the user to run `/load <name>` (to update an existing memory) or `/name <name>` (to create one) first, then stop.
+   - Otherwise, use the printed name as `<name>` below.
 
 2. Read `~/.claude/profiles/<name>/memory.md` to see the current state (header plus content below the `---` divider).
 
