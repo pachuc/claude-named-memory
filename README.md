@@ -4,7 +4,7 @@ A Claude Code plugin that gives Claude named memory profiles — persistent per-
 
 It comes in two tiers:
 
-- **Minimal (default).** Two slash commands and *no changes to your system*. `/load <name>` pulls a profile's `memory.md` into the current session's context; `/save` writes what you've learned back to it. `/name <name>` creates a new profile. Nothing touches your shell rc, and the plugin's hooks stay dormant.
+- **Minimal (default).** Three slash commands and *no changes to your system*. `/load <name>` pulls a profile's `memory.md` into the current session's context; `/save` writes what you've learned back to it. `/name <name>` creates a new profile. Nothing touches your shell rc, and the plugin's hooks stay dormant.
 - **Extra (opt-in via `/install-extra`).** Adds the fully automatic experience: a `claude-<name>` shell alias per profile that auto-loads `memory.md` as system-prompt context, plus a `SessionEnd` hook that spawns a headless `claude -p` to extract anything the in-session model missed and compact the file when it grows past 20,000 words. Reverse it anytime with `/uninstall-extra`.
 
 ## Why named memory profiles
@@ -33,7 +33,7 @@ To turn on the automatic experience (shell aliases, auto-load, SessionEnd extrac
 /named-memory:install-extra
 ```
 
-Re-run `/named-memory:install-extra` after a plugin *upgrade* (an upgrade resets the plugin cache, but the marker that drives the extra experience persists, so this just re-installs aliases/shortcuts for any new profiles). Disable it anytime with `/named-memory:uninstall-extra` — your `memory.md` files are preserved.
+Disable it anytime with `/named-memory:uninstall-extra` — your `memory.md` files are preserved.
 
 ## Features
 
