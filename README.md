@@ -1,6 +1,11 @@
 # named-memory
 
-A Claude Code plugin that gives `claude` named memory profiles. Run plain `claude` for a clean slate, or `claude-<name>` to launch Claude Code with a persistent per-name `memory.md` already loaded as system-prompt context. The file updates organically as you work, and a `SessionEnd` hook spawns a headless `claude -p` to extract anything the in-session model missed and compact the file when it grows past 20,000 words.
+A Claude Code plugin that gives Claude named memory profiles — persistent per-name `memory.md` files for context that doesn't belong to any single project directory or to your global user preferences.
+
+It comes in two tiers:
+
+- **Minimal (default).** Two slash commands and *no changes to your system*. `/load <name>` pulls a profile's `memory.md` into the current session's context; `/save` writes what you've learned back to it. `/name <name>` creates a new profile. Nothing touches your shell rc, and the plugin's hooks stay dormant.
+- **Extra (opt-in via `/install-extra`).** Adds the fully automatic experience: a `claude-<name>` shell alias per profile that auto-loads `memory.md` as system-prompt context, plus a `SessionEnd` hook that spawns a headless `claude -p` to extract anything the in-session model missed and compact the file when it grows past 20,000 words. Reverse it anytime with `/uninstall-extra`.
 
 ## Why named memory profiles
 
@@ -18,47 +23,78 @@ Named profiles give each of these a dedicated, persistent home. `claude-linux-se
 ```text
 /plugin marketplace add pachuc/claude-named-memory
 /plugin install named-memory@pachu-plugins
-# optionally add /name shortcut
-/named-memory:install
 ```
+
+That's the whole minimal install — `/named-memory:load`, `/named-memory:save`, and `/named-memory:name` are now available, and nothing on your system has changed.
+
+To turn on the automatic experience (shell aliases, auto-load, SessionEnd extraction, and un-namespaced `/name` `/load` `/save` shortcuts):
+
+```text
+/named-memory:install-extra
+```
+
+Re-run `/named-memory:install-extra` after a plugin *upgrade* (an upgrade resets the plugin cache, but the marker that drives the extra experience persists, so this just re-installs aliases/shortcuts for any new profiles). Disable it anytime with `/named-memory:uninstall-extra` — your `memory.md` files are preserved.
 
 ## Features
 
-- **Per-name persistent memory.** Each profile gets `~/.claude/profiles/<name>/memory.md`. It's loaded into Claude's system prompt at session start so the model has the prior context immediately.
-- **Organic mid-session writes.** The agent updates `memory.md` directly via Edit/Write as it learns things worth keeping — no special syntax, no "save this" command.
+**Minimal tier (always available, no system changes):**
+
+- **Per-name persistent memory.** Each profile is `~/.claude/profiles/<name>/memory.md`.
+- **Manual load/save.** `/load <name>` pulls a profile's memory into the current session's context (one profile per session). `/save` writes what you've learned this session back to the active profile.
+- **Create from context.** `/name <name>` synthesizes a new profile from the current conversation.
+- **Zero footprint.** No shell rc edits, no active hooks. The plugin's hooks are registered but dormant — they no-op until you opt in.
+
+**Extra tier (after `/install-extra`):**
+
+- **One shell alias per profile.** `claude-<name>` exports `CLAUDE_NM_PROFILE=<name>`, auto-loads `memory.md` as system-prompt context, and runs `claude`.
 - **Automatic extraction + compaction at session end.** A backgrounded headless `claude -p` reads the session transcript, captures anything the in-session model didn't already write down, and compacts the file when it crosses the word threshold. Survives the parent session's exit.
-- **One shell alias per profile.** `claude-<name>` is a function/alias the plugin installs in your shell. It exports `CLAUDE_NM_PROFILE=<name>` then runs `claude` — that's the entire activation mechanism.
-- **Vanilla `claude` is untouched.** With no profile env var set, every hook script fast-fails in sub-millisecond time. No banners, no extra context, no behavioral difference.
 - **Health banner only when something actually broke.** A `SessionStart` hook parses the per-profile audit log and emits a one-line prescriptive banner on real structural failures. Healthy sessions add zero context.
 - **Append-only audit log per profile** at `~/.claude/profiles/<name>/audit.log` for debugging hook execution.
+- **Reversible.** `/uninstall-extra` removes aliases, shortcuts, and re-dormants the hooks; `memory.md` files are kept.
 
 ### Slash commands
 
-All commands are namespaced under `/named-memory:`. `/named-memory:install` adds the `/name` command as a top level slash command.
+All commands are namespaced under `/named-memory:`. `/install-extra` additionally drops un-namespaced `/name`, `/load`, and `/save` shortcuts.
 
-`/named-memory:name <profile>` (or `/name <profile>`) - Create or update a profile from the *current* session's context. Synthesizes `memory.md` and installs the `claude-<profile>` shell alias. Re-running on an existing profile updates without clobbering.
-`/named-memory:install` - One-time step that drops a `~/.claude/commands/name.md` shortcut so `/name` works in any session.
-`/named-memory:list` - Table of all profiles with size (in words), last-modified time, and a preview of the first content line. Flags profiles near the compaction limit.
-`/named-memory:view <name>` - Print the full `memory.md` for a profile.
-`/named-memory:rename <old> <new>` - Move the profile directory and swap the shell alias atomically.
-`/named-memory:delete <name>` - Delete a profile after a double confirmation (in-session question + script-level `--yes` enforcement).
-`/named-memory:ack <name>` - Dismiss the SessionStart failure banner for a profile (after you've read `extract.log` and resolved the issue, or just want to silence the warning).
+`/named-memory:load <name>` (or `/load <name>`) — Load a profile's `memory.md` into the current session's context. One profile per session.
+`/named-memory:save` (or `/save`) — Save the active profile (the one loaded via `/load` or created via `/name` this session) back to disk. Takes no argument.
+`/named-memory:name <name>` (or `/name <name>`) — Create a new profile from the *current* session's context. In the extra tier this also installs the `claude-<name>` alias.
+`/named-memory:install-extra` — Enable the automatic experience: shell aliases, active hooks, and the un-namespaced shortcuts.
+`/named-memory:uninstall-extra` — Disable the automatic experience (memory files are preserved).
+`/named-memory:list` — Table of all profiles with size (in words), last-modified time, and a preview of the first content line. Flags profiles near the compaction limit.
+`/named-memory:view <name>` — Print the full `memory.md` for a profile.
+`/named-memory:rename <old> <new>` — Move the profile directory and swap the shell alias atomically.
+`/named-memory:delete <name>` — Delete a profile after a double confirmation (in-session question + script-level `--yes` enforcement).
+`/named-memory:ack <name>` — Dismiss the SessionStart failure banner for a profile (extra tier only).
 
 ### Typical workflow
 
+**Minimal:**
+
 ```text
-# 1. After some useful work in a vanilla session, spin off a named agent:
+# 1. Create a profile from a useful session:
 > /name myproject
 
-# 2. In a new shell:
+# 2. Later, in any session, pull it back into context and keep working:
+> /load myproject
+> ...work...
+> /save        # persist what you learned this session
+```
+
+**Extra (after /install-extra):**
+
+```text
+# 1. Create a profile, which now also installs a claude-myproject alias:
+> /name myproject
+
+# 2. In a new shell — memory.md is auto-loaded as context:
 $ claude-myproject
 
-# 3. Inside that session, memory.md is already loaded. Work normally —
-#    the model reads/writes memory.md as it goes.
+# 3. Work normally; the model reads/writes memory.md as it goes.
 
 # 4. On /exit (or double Ctrl+C), the SessionEnd hook backgrounds an
-#    extractor against the transcript. By the time you start your
-#    next claude-myproject session, memory.md is updated and compacted.
+#    extractor against the transcript. By your next claude-myproject
+#    session, memory.md is updated and compacted.
 ```
 
 ### Configuration
@@ -73,17 +109,24 @@ The compaction word threshold is `INITIAL_WORDS -gt 20000` in `bin/compact-on-ex
 
 Plugin-level hooks are registered in `hooks/hooks.json` and reference scripts via `${CLAUDE_PLUGIN_ROOT}/bin/<script>.sh`. `CLAUDE_PLUGIN_ROOT` is a path placeholder Claude Code resolves at hook fire time, so plugin upgrades automatically resolve to the new cache path — no user-side housekeeping.
 
-Every hook script's first executable line is:
+The hooks are *always registered* but *dormant by default*. They are gated by two guards, checked at the top of every hook script:
 
 ```bash
+# 1. Extra experience must be enabled (the /install-extra marker).
+[ -f "$HOME/.claude/named-memory/extra-enabled" ] || exit 0
+# 2. A named profile must be active for this session.
 [ -z "${CLAUDE_NM_PROFILE:-}" ] && exit 0
 NAME="$CLAUDE_NM_PROFILE"
 ```
 
-The per-profile shell alias `claude-<name>` exports `CLAUDE_NM_PROFILE=<name>` before invoking `claude`. Arbitrary user env vars propagate through Claude Code into the `/bin/sh -c` that runs hook commands — only `PATH` is observably tampered with. So:
+The marker file lives at `~/.claude/named-memory/extra-enabled` — *outside* the version-stamped plugin cache, so it survives plugin upgrades (the cache is replaced wholesale on upgrade, so it's the wrong place for persistent state). `/install-extra` creates it; `/uninstall-extra` removes it. Because the marker is read at hook *execution* time, toggling it takes effect immediately — no `/reload-plugins` required.
 
-- `claude-myproject` → env var set → hooks see it → real work happens
-- plain `claude` → env var unset → hooks exit in microseconds → no observable behavior change
+The per-profile shell alias `claude-<name>` (installed by `/install-extra`) exports `CLAUDE_NM_PROFILE=<name>` before invoking `claude`. So:
+
+- `claude-myproject` (extra enabled) → marker present + env var set → hooks do real work
+- plain `claude`, or any session in the minimal tier → at least one guard fails → hooks exit in microseconds → no observable behavior change
+
+This is why the minimal tier is truly zero-footprint: with no marker, the hooks short-circuit before doing anything, and nothing is ever written to your shell rc.
 
 ### Memory lifecycle
 
@@ -107,7 +150,7 @@ But **the gate only fires on the model's Edit/Write/MultiEdit tools, not on shel
 
 The agent never touches `~/.claude/` directly. The gate never fires. No bypass flags, no research-preview features, no data migration.
 
-Interactive `/name` is the exception: when you explicitly run that command, the in-session agent updates `memory.md` directly via Edit, and you approve the one prompt the gate produces. The friction is acceptable in interactive contexts where the user is sitting at the prompt with explicit intent.
+The interactive commands `/name` and `/save` are the exception: when you explicitly run them, the in-session agent updates `memory.md` directly via Edit/Write, and you approve the one prompt the gate produces. The friction is acceptable in interactive contexts where the user is sitting at the prompt with explicit intent. (The tmp+install dance above exists only for the *automatic* SessionEnd extractor, which has no human to approve a prompt.)
 
 ### Audit log + banner pipeline
 
@@ -136,7 +179,7 @@ The agent never reads `audit.log` directly. The shell does the parsing; the agen
 
 ### Shell integration
 
-`bin/setup-profile.sh` detects the user's login shell from `getent passwd` / `/etc/passwd` / `dscl` (falling back to `$SHELL`) and writes the alias accordingly:
+`bin/install-alias.sh` (invoked by `/install-extra`, and by `/name` when the extra tier is enabled) detects the user's login shell from `getent passwd` / `/etc/passwd` / `dscl` (falling back to `$SHELL`) and writes the alias accordingly:
 
 - **fish** — a function file at `~/.config/fish/functions/claude-<name>.fish` (autoloaded on demand)
 - **bash/zsh** — an `alias` line appended to the appropriate rc file
@@ -156,7 +199,7 @@ function claude-<name>
 end
 ```
 
-Shell choice and alias install path are recorded in `~/.claude/scripts/profile-config.sh` on first profile creation and reused for subsequent profiles.
+Shell choice and alias install path are recorded in `~/.claude/scripts/profile-config.sh` the first time an alias is installed and reused for subsequent profiles. In the minimal tier this script never runs, so no alias and no config are created.
 
 ### Why this design
 
@@ -180,8 +223,11 @@ claude-named-memory/
 │       │   └── hooks.json                 ← SessionStart / SessionEnd / PostToolUse registrations,
 │       │                                    each referencing ${CLAUDE_PLUGIN_ROOT}/bin/<script>.sh
 │       ├── commands/                      ← slash-command markdown (frontmatter + body)
-│       │   ├── name.md                    ← /named-memory:name <profile>
-│       │   ├── install.md                 ← /named-memory:install
+│       │   ├── load.md                    ← /named-memory:load <name>  (minimal)
+│       │   ├── save.md                    ← /named-memory:save         (minimal)
+│       │   ├── name.md                    ← /named-memory:name <name>
+│       │   ├── install-extra.md           ← /named-memory:install-extra
+│       │   ├── uninstall-extra.md         ← /named-memory:uninstall-extra
 │       │   ├── list.md                    ← /named-memory:list
 │       │   ├── view.md                    ← /named-memory:view <name>
 │       │   ├── rename.md                  ← /named-memory:rename <old> <new>
@@ -190,12 +236,15 @@ claude-named-memory/
 │       └── bin/                           ← shell scripts; on PATH for the Bash tool inside
 │           │                                Claude sessions, but referenced from hooks.json via
 │           │                                ${CLAUDE_PLUGIN_ROOT}, NOT via PATH
-│           ├── setup-profile.sh           ← creates profile dir + memory.md header + shell alias
+│           ├── setup-profile.sh           ← creates profile dir + memory.md header (no alias)
+│           ├── install-alias.sh           ← installs claude-<name> alias (extra tier only)
+│           ├── install-extra.sh           ← /install-extra: marker + aliases + shortcuts
+│           ├── uninstall-extra.sh         ← /uninstall-extra: removes marker/aliases/shortcuts
 │           ├── compact-on-exit.sh         ← SessionEnd hook: tmp+install extractor
 │           ├── check-failures.sh          ← SessionStart hook: parses audit.log, emits banner
 │           ├── log-memory-edit.sh         ← PostToolUse hook: logs agent writes to memory.md
 │           ├── ack-failures.sh            ← appends `user ack` to audit.log
-│           ├── install-shortcut.sh        ← drops ~/.claude/commands/name.md
+│           ├── install-shortcut.sh        ← drops ~/.claude/commands/<cmd>.md shortcuts
 │           ├── list-profiles.sh           ← TSV: name<TAB>words<TAB>mtime<TAB>preview
 │           ├── delete-profile.sh          ← removes profile dir + alias (after --yes guard)
 │           └── rename-profile.sh          ← moves profile dir + swaps alias
@@ -206,13 +255,14 @@ claude-named-memory/
 User-side state created at runtime (lives outside the repo, persists across plugin updates):
 
 ```text
-~/.claude/profiles/<name>/memory.md        ← the persistent memory
-~/.claude/profiles/<name>/audit.log        ← append-only TSV
-~/.claude/profiles/<name>/extract.log      ← headless-extractor stdout/stderr
-~/.claude/scripts/profile-config.sh        ← shell type + alias install path
-~/.claude/commands/name.md                 ← /name shortcut (from /named-memory:install)
+~/.claude/profiles/<name>/memory.md        ← the persistent memory (minimal + extra)
+~/.claude/named-memory/extra-enabled       ← marker: extra tier is enabled (from /install-extra)
+~/.claude/profiles/<name>/audit.log        ← append-only TSV (extra tier)
+~/.claude/profiles/<name>/extract.log      ← headless-extractor stdout/stderr (extra tier)
+~/.claude/scripts/profile-config.sh        ← shell type + alias install path (extra tier)
+~/.claude/commands/{name,load,save}.md     ← un-namespaced shortcuts (from /install-extra)
 ~/.config/fish/functions/claude-<name>.fish
-   or ~/.bashrc / ~/.zshrc alias line      ← the per-profile shell alias
+   or ~/.bashrc / ~/.zshrc alias line      ← the per-profile shell alias (extra tier)
 ```
 
 ## License

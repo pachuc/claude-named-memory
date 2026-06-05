@@ -1,7 +1,7 @@
 {
   "name": "named-memory",
-  "description": "Named agent profiles for Claude Code: invoke claude-<name> to load a persistent per-name memory.md that updates organically during the session and is extracted/compacted at SessionEnd.",
-  "version": "0.1.0",
+  "description": "Named memory profiles for Claude Code. Minimal by default: /load <name> and /save manage a persistent per-name memory.md with no changes to your shell. Opt into /install-extra for claude-<name> aliases plus automatic load and SessionEnd extraction/compaction.",
+  "version": "0.2.0",
   "author": {
     "name": "pachu"
   }

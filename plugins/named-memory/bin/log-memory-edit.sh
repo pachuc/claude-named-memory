@@ -9,6 +9,10 @@
 
 set -euo pipefail
 
+# Dormant unless the extra (automatic) experience is enabled via /install-extra.
+# The marker lives outside the version-stamped plugin cache so it survives upgrades.
+[ -f "$HOME/.claude/named-memory/extra-enabled" ] || exit 0
+
 # Fast-fail in vanilla sessions — no named profile active.
 [ -z "${CLAUDE_NM_PROFILE:-}" ] && exit 0
 NAME="$CLAUDE_NM_PROFILE"
